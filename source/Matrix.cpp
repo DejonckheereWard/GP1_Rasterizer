@@ -145,13 +145,25 @@ namespace dae {
 	Matrix Matrix::CreateLookAtLH(const Vector3& origin, const Vector3& forward, const Vector3& up)
 	{
 		//TODO W1
+		// ONB Matrix (invViewmatrix)
 
-		return {};
+		//Vector3 zAxis = forward;
+		//Vector3 xAxis = Vector3::Cross(up, zAxis).Normalized();
+		//Vector3 yAxis = Vector3::Cross(zAxis, xAxis);
+		const Vector3 right = Vector3::Cross(Vector3::UnitY, forward).Normalized();
+		return {
+			Vector4(right, 0),
+			Vector4(up, 0),
+			Vector4(forward, 0),
+			Vector4(origin, 1)
+		};
 	}
 
 	Matrix Matrix::CreatePerspectiveFovLH(float fov, float aspect, float zn, float zf)
 	{
-		//TODO W2
+		//float yScale{ cosf(fov / 2.0f) / cosf()};
+
+		//float xScale = yScale 
 
 		return {};
 	}
