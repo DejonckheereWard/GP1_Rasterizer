@@ -123,6 +123,17 @@ namespace dae {
 		return *this;
 	}
 
+	bool Vector3::operator==(const Vector3& other)
+	{
+		if (this->x != other.x)
+			return false;
+		if (this->y != other.y)
+			return false;
+		if (this->z != other.z)
+			return false;
+		return true;
+	}
+
 	Vector3& Vector3::operator/=(float scale)
 	{
 		x /= scale;
@@ -146,6 +157,7 @@ namespace dae {
 		z += v.z;
 		return *this;
 	}
+
 
 	float& Vector3::operator[](int index)
 	{

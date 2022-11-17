@@ -35,10 +35,11 @@ namespace dae
 
 	private:
 		SDL_Window* m_pWindow{};
-
+		
 		SDL_Surface* m_pFrontBuffer{ nullptr };
 		SDL_Surface* m_pBackBuffer{ nullptr };
 		uint32_t* m_pBackBufferPixels{};
+		Texture* m_pTexture{ nullptr };
 
 		float* m_pDepthBufferPixels{};
 
@@ -49,12 +50,15 @@ namespace dae
 
 		//Function that transforms the vertices from the mesh from World space to Screen space
 		void VertexTransformationFunction(const std::vector<Vertex>& vertices_in, std::vector<Vertex>& vertices_out) const; //W1 Version
+		void VertexTransformationFunction(std::vector<Mesh>& meshes) const; //W1 Version
 		void ClearBackBuffer();
-
-		void Render_Part1();  // Rasterizer stage only
-		void Render_Part2();  // Projection stage only
-		void Render_Part3();  // Barycentric coords
-		void Render_Part4();  // Depth buffer
-		void Render_Part5();  // Bounding box optimization
+#ifdef Week06
+		void Render_W06_P1();  // Rasterizer stage only
+		void Render_W06_P2();  // Projection stage only
+		void Render_W06_P3();  // Barycentric coords
+		void Render_W06_P4();  // Depth buffer
+		void Render_W06_P5();  // Bounding box optimization
+#endif
+		void Render_W07_P1();
 	};
 }

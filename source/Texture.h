@@ -7,13 +7,20 @@ namespace dae
 {
 	struct Vector2;
 
+	enum class UVMode
+	{
+		Wrap,
+		Clamp,
+		Mirror
+	};
+	
 	class Texture
 	{
 	public:
 		~Texture();
 
 		static Texture* LoadFromFile(const std::string& path);
-		ColorRGB Sample(const Vector2& uv) const;
+		ColorRGB Sample(const Vector2& uv, UVMode uvMode = UVMode::Wrap) const;
 
 	private:
 		Texture(SDL_Surface* pSurface);

@@ -26,11 +26,16 @@ Renderer::Renderer(SDL_Window* pWindow) :
 
 	//Initialize Camera
 	m_Camera.Initialize(60.f, { .0f,.0f,-10.f });
+
+	// Temp texture init
+
+    m_pTexture = Texture::LoadFromFile("./Resources/uv_grid_2.png");
 }
 
 Renderer::~Renderer()
 {
 	delete[] m_pDepthBufferPixels;
+	delete m_pTexture;
 }
 
 void Renderer::Update(Timer* pTimer)
@@ -44,11 +49,13 @@ void Renderer::Render()
 	//Lock BackBuffer
 	SDL_LockSurface(m_pBackBuffer);
 
-	//Render_Part1();
-	//Render_Part2();
-	//Render_Part3();
-	//Render_Part4();
-	Render_Part5();
+	//Render_W06_P1();
+	//Render_W06_P2();
+	//Render_W06_P3();
+	//Render_W06_P4();
+	//Render_W06_P5();
+
+	Render_W07_P1();
 
 
 	//RENDER LOGIC
@@ -115,14 +122,59 @@ void Renderer::VertexTransformationFunction(const std::vector<Vertex>& vertices_
 	}
 }
 
+
+void Renderer::VertexTransformationFunction(std::vector<Mesh>& meshes) const
+{
+	// Convert the vertices_in from world space to screen space (NDC intermedian step)
+	// World -> NDC -> Screen
+
+	//vertices_out.clear();
+	//vertices_out.reserve(meshes.size() * 3);
+
+	for (Mesh& mesh : meshes)
+	{
+		for (const Vertex& vert : mesh.vertices)
+		{
+			// World to camera (view space)
+			Vector3 viewSpaceVertex = m_Camera.viewMatrix.TransformPoint(vert.position);  // Transform the position
+
+			// Consider the camera (fov & aspect ration) first
+			Vector3 adjustedViewSpaceVertex;
+			const float aspectRatio = m_Width / (float)m_Height;
+			adjustedViewSpaceVertex.x = viewSpaceVertex.x / (aspectRatio * m_Camera.fov);
+			adjustedViewSpaceVertex.y = viewSpaceVertex.y / m_Camera.fov;
+			
+			// Convert to NDC (perspective divide) / projection space
+			Vector3 ndcSpaceVertex;
+			ndcSpaceVertex.x = adjustedViewSpaceVertex.x / viewSpaceVertex.z;
+			ndcSpaceVertex.y = adjustedViewSpaceVertex.y / viewSpaceVertex.z;
+			ndcSpaceVertex.z = viewSpaceVertex.z;
+
+			// Transform to screen space
+			Vertex_Out& screenSpaceVert = mesh.vertices_out.emplace_back(Vertex_Out{});
+			screenSpaceVert.position = {
+				(ndcSpaceVertex.x + 1) / 2.0f * m_Width , // Screen X
+				(1 - ndcSpaceVertex.y) / 2.0f * m_Height, // Screen Y,
+				ndcSpaceVertex.z,
+				1.0f / viewSpaceVertex.z
+			};
+			screenSpaceVert.color = vert.color;
+			screenSpaceVert.uv = vert.uv;
+
+		}
+	}
+}
+
+
 void dae::Renderer::ClearBackBuffer()
 {
 	ColorRGB clearColor{ 100, 100, 100 };
-	uint32_t hexColor = 0xFF000000 | (uint32_t)clearColor.b << 8 | (uint32_t)clearColor.g << 16 | (uint32_t)clearColor.r;
+	uint32_t hexColor = 0xFF000000 | (uint32_t)clearColor.b << 16 | (uint32_t)clearColor.g << 8 | (uint32_t)clearColor.r;
 	SDL_FillRect(m_pBackBuffer, NULL, hexColor);
 }
 
-void dae::Renderer::Render_Part1()
+#ifdef Week06
+void dae::Renderer::Render_W06_P1()
 {
 	// Triangle in NDC Space (Normalized Device Coords)
 	std::vector<Vector3> vertices_ndc
@@ -161,7 +213,7 @@ void dae::Renderer::Render_Part1()
 			Vector2 pixel{ float(px) + 0.5f, float(py) + 0.5f };  // Define pixel as 2D point (take center of the pixel)
 
 			// Define the edges of the screen triangle
-			const Vector2 edgeA{ vertices_screen[0], vertices_screen[1] }; // AB
+			const Vector2 edgeA{ vertices_screen[0],-vertices_screen[1] }; // AB
 			const Vector2 edgeB{ vertices_screen[1], vertices_screen[2] }; // BC
 			const Vector2 edgeC{ vertices_screen[2], vertices_screen[0] }; // CA
 
@@ -190,7 +242,7 @@ void dae::Renderer::Render_Part1()
 	}
 }
 
-void dae::Renderer::Render_Part2()
+void dae::Renderer::Render_W06_P2()
 {
 	std::vector<Vertex> vertices_world{
 		{{0.f, 2.f, 0.f}},
@@ -201,6 +253,8 @@ void dae::Renderer::Render_Part2()
 	std::vector<Vertex> vertices_screen{};
 
 	VertexTransformationFunction(vertices_world, vertices_screen);
+
+	// Load the texture
 
 
 	for (int py = 0; py < m_Height; ++py)
@@ -249,7 +303,7 @@ void dae::Renderer::Render_Part2()
 
 }
 
-void dae::Renderer::Render_Part3()
+void dae::Renderer::Render_W06_P3()
 {
 	std::vector<Vertex> vertices_world{
 		{{0.f, 4.f, 2.f}, ColorRGB(colors::Red)},
@@ -326,7 +380,7 @@ void dae::Renderer::Render_Part3()
 
 }
 
-void dae::Renderer::Render_Part4()
+void dae::Renderer::Render_W06_P4()
 {
 	ClearBackBuffer();
 	std::fill_n(m_pDepthBufferPixels, m_Width * m_Height, FLT_MAX);
@@ -421,7 +475,7 @@ void dae::Renderer::Render_Part4()
 	}
 }
 
-void dae::Renderer::Render_Part5()
+void dae::Renderer::Render_W06_P5()
 {
 	ClearBackBuffer();
 	std::fill_n(m_pDepthBufferPixels, m_Width * m_Height, FLT_MAX);
@@ -457,7 +511,7 @@ void dae::Renderer::Render_Part5()
 		Vector2 bbMin;
 		bbMin.x = std::min(A.position.x, std::min(B.position.x, C.position.x));
 		bbMin.y = std::min(A.position.y, std::min(B.position.y, C.position.y));
-		
+
 		Vector2 bbMax;
 		bbMax.x = std::max(A.position.x, std::max(B.position.x, C.position.x));
 		bbMax.y = std::max(A.position.y, std::max(B.position.y, C.position.y));
@@ -522,6 +576,198 @@ void dae::Renderer::Render_Part5()
 						static_cast<uint8_t>(finalColor.g * 255),
 						static_cast<uint8_t>(finalColor.b * 255));
 
+				}
+			}
+		}
+	}
+}
+#endif
+
+void dae::Renderer::Render_W07_P1()
+{
+	ClearBackBuffer();
+	std::fill_n(m_pDepthBufferPixels, m_Width * m_Height, FLT_MAX);
+	std::vector<Vertex> vertices_world{
+		   {{0.f, 2.f, 0.f}, ColorRGB(colors::Red)},
+		   {{1.5f, -1.f, 0.f}, ColorRGB(colors::Red)},
+		   {{-1.5f, -1.f, 0.f}, ColorRGB(colors::Red)},
+
+		   {{ 0.f, 4.f, 2.f}, ColorRGB(colors::Red)},
+		   {{ 3.f, -2.f, 2.f}, ColorRGB(colors::Green)},
+		   {{ -3.f, -2.f, 2.f}, ColorRGB(colors::Blue)}
+	};
+
+	std::vector<Mesh> meshes
+	{
+		/*
+		Mesh
+		{
+			{
+				Vertex{{ -3,3,-2 }, {}, {0, 0}},
+				Vertex{{ 0,3,-2 }, {}, {.5f, 0}},
+				Vertex{{ 3,3,-2 }, {}, {1, 0}},
+				Vertex{{ -3,0,-2 }, {}, {0, .5f}},
+				Vertex{{ 0,0,-2 }, {}, {.5f, .5f}},
+				Vertex{{ 3,0,-2 }, {}, {1, .5f}},
+				Vertex{{ -3,-3,-2 }, {}, {0, 1}},
+				Vertex{{ 0,-3,-2 }, {}, {.5f, 1}},
+				Vertex{{ 3,-3,-2 }, {}, {1, 1}},
+			},
+			{
+				3,0,4,1,5,2,
+				2,6,
+				6,3,7,4,8,5
+			},
+			PrimitiveTopology::TriangleStrip
+		},
+		*/
+		Mesh
+		{
+			{
+				Vertex{{ -3,3,-2 }, {}, {0, 0}},
+				Vertex{{ 0,3,-2 }, {}, {.5f, 0}},
+				Vertex{{ 3,3,-2 }, {}, {1, 0}},
+				Vertex{{ -3,0,-2 }, {}, {0, .5f}},
+				Vertex{{ 0,0,-2 }, {}, {.5f, .5f}},
+				Vertex{{ 3,0,-2 }, {}, {1, .5f}},
+				Vertex{{ -3,-3,-2 }, {}, {0, 1}},
+				Vertex{{ 0,-3,-2 }, {}, {.5f, 1}},
+				Vertex{{ 3,-3,-2 }, {}, {1, 1}},
+			},
+			{
+				3,0,1,   1,4,3,   4,1,2,
+				2,5,4,   6,3,4,   4,7,6,
+				7,4,5,   5,8,7,
+			},
+			PrimitiveTopology::TriangleList
+		}
+	};
+
+
+	VertexTransformationFunction(meshes);
+
+	for (const Mesh& mesh : meshes)
+	{
+		//VertexTransformationFunction(mesh.vertices, mesh_screen.vertices);
+
+		// If triangle strip, move only one position per itteration & inverse the direction on every odd loop
+		int increment = 3;
+		if (mesh.primitiveTopology == PrimitiveTopology::TriangleStrip)
+			increment = 1;
+
+		for (int indiceIdx = 0; indiceIdx < mesh.indices.size() - 2; indiceIdx += increment)
+		{
+			// Get the vertices using the indice numbers
+			uint32_t indiceA{ mesh.indices[indiceIdx] };
+			uint32_t indiceB{ mesh.indices[indiceIdx + 1] };
+			uint32_t indiceC{ mesh.indices[indiceIdx + 2] };
+
+			Vertex_Out A{ mesh.vertices_out[indiceA] };
+			Vertex_Out B{ mesh.vertices_out[indiceB] };
+			Vertex_Out C{ mesh.vertices_out[indiceC] };
+
+			// If triangle strip, move only one position per itteration & inverse the direction on every odd loop
+
+			if (mesh.primitiveTopology == PrimitiveTopology::TriangleStrip)
+			{
+				// Check if least significant bit is 1 (odd number)
+				if ((indiceIdx & 1) == 1)
+					std::swap(B, C);
+
+				// Check if any vertices of the triangle are the same (and thus the triangle has 0 area / should not be rendered)
+				if (indiceA == indiceB)
+					continue;
+
+				if (indiceB == indiceC)
+					continue;
+
+				if (indiceC == indiceA)
+					continue;
+			}
+
+			// Define the edges of the screen triangle
+			const Vector2 edgeA{ A.position.GetXY(), B.position.GetXY() };
+			const Vector2 edgeB{ B.position.GetXY(), C.position.GetXY() };
+			const Vector2 edgeC{ C.position.GetXY(), A.position.GetXY() };
+
+			// Get the bounding box of the triangle (min max)
+			Vector2 bbMin;
+			bbMin.x = std::min(A.position.x, std::min(B.position.x, C.position.x));
+			bbMin.y = std::min(A.position.y, std::min(B.position.y, C.position.y));
+
+			Vector2 bbMax;
+			bbMax.x = std::max(A.position.x, std::max(B.position.x, C.position.x));
+			bbMax.y = std::max(A.position.y, std::max(B.position.y, C.position.y));
+
+			bbMin.x = Clamp(bbMin.x, 0.0f, float(m_Width));
+			bbMin.y = Clamp(bbMin.y, 0.0f, float(m_Height));
+
+			bbMax.x = Clamp(bbMax.x, 0.0f, float(m_Width));
+			bbMax.y = Clamp(bbMax.y, 0.0f, float(m_Height));
+
+			for (int py = int(bbMin.y); py < int(bbMax.y); ++py)
+			{
+				for (int px = int(bbMin.x); px < int(bbMax.x); ++px)
+				{
+					// Get the current pixel into a vector
+					Vector2 pixel{ float(px) + 0.5f, float(py) + 0.5f };  // Define pixel as 2D point (take center of the pixel)
+
+					// Get the signed areas of every edge (no division by 2 because triangle area isn't either, and we are only interested in percentage)
+					const float signedAreaParallelogramAB{ Vector2::Cross(edgeA, Vector2{ A.position.GetXY(), pixel }) };
+					const float signedAreaParallelogramBC{ Vector2::Cross(edgeB, Vector2{ B.position.GetXY(), pixel }) };
+					const float signedAreaParallelogramCA{ Vector2::Cross(edgeC, Vector2{ C.position.GetXY(), pixel }) };
+					const float triangleArea = Vector2::Cross(edgeA, -edgeC);
+
+					// isInside will turn false if any of the below 3 caclulations returns a negative number (true &= true -> true while true &= false -> false)
+					bool isInside = true;
+					isInside &= signedAreaParallelogramAB >= 0.0f;
+					isInside &= signedAreaParallelogramBC >= 0.0f;
+					isInside &= signedAreaParallelogramCA >= 0.0f;
+
+					if (isInside)
+					{
+						// Get the weights of each vertex
+						const float weightA{ signedAreaParallelogramBC / triangleArea };
+						const float weightB{ signedAreaParallelogramCA / triangleArea };
+						const float weightC{ signedAreaParallelogramAB / triangleArea };
+
+						// Check if total weight is +/- 1.0f;
+						assert((weightA + weightB + weightC) > 0.99f);
+						assert((weightA + weightB + weightC) < 1.01f);
+
+						// Float get the interpolated depth value using the barycentric weights
+						//float currentDepth = (A.position.z * weightA) + (B.position.z * weightB) + (C.position.z * weightC);
+						const float zInterpolated = 1.0f / ((A.position.w * weightA) + (B.position.w * weightB) + (C.position.w * weightC));
+
+						// Check the depth buffer
+						if (zInterpolated > m_pDepthBufferPixels[px + (py * m_Width)])
+							continue;
+
+						m_pDepthBufferPixels[px + (py * m_Width)] = zInterpolated;
+
+						//const ColorRGB color{ A.color * weightA + B.color * weightB + C.color * weightC };
+
+						// ColorRGB finalColor{ gradient, gradient, gradient };
+						//Update Color in Buffer
+
+						Vector2 uvInterpolated = {
+							(A.uv / A.position.z) * weightA +
+							(B.uv / B.position.z) * weightB +
+							(C.uv / C.position.z) * weightC
+						};						
+
+						uvInterpolated *= zInterpolated;
+
+
+						ColorRGB finalColor = { m_pTexture->Sample(uvInterpolated) };
+
+						finalColor.MaxToOne();
+						m_pBackBufferPixels[px + (py * m_Width)] = SDL_MapRGB(m_pBackBuffer->format,
+							static_cast<uint8_t>(finalColor.r * 255),
+							static_cast<uint8_t>(finalColor.g * 255),
+							static_cast<uint8_t>(finalColor.b * 255));
+
+					}
 				}
 			}
 		}

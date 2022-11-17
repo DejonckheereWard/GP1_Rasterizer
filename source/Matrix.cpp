@@ -60,6 +60,7 @@ namespace dae {
 		return TransformPoint(p.x, p.y, p.z, p.w);
 	}
 
+	
 	Vector4 Matrix::TransformPoint(float x, float y, float z, float w) const
 	{
 		return Vector4{
