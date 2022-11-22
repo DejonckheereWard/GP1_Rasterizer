@@ -29,7 +29,7 @@ Renderer::Renderer(SDL_Window* pWindow) :
 
 	// Temp texture init
 
-    m_pTexture = Texture::LoadFromFile("./Resources/uv_grid_2.png");
+	m_pTexture = Texture::LoadFromFile("./Resources/uv_grid_2.png");
 }
 
 Renderer::~Renderer()
@@ -143,7 +143,7 @@ void Renderer::VertexTransformationFunction(std::vector<Mesh>& meshes) const
 			const float aspectRatio = m_Width / (float)m_Height;
 			adjustedViewSpaceVertex.x = viewSpaceVertex.x / (aspectRatio * m_Camera.fov);
 			adjustedViewSpaceVertex.y = viewSpaceVertex.y / m_Camera.fov;
-			
+
 			// Convert to NDC (perspective divide) / projection space
 			Vector3 ndcSpaceVertex;
 			ndcSpaceVertex.x = adjustedViewSpaceVertex.x / viewSpaceVertex.z;
@@ -423,7 +423,7 @@ void dae::Renderer::Render_W06_P4()
 
 				// isInside will turn false if any of the below 3 caclulations returns a negative number (true &= true -> true while true &= false -> false)
 
-				const float signedAreaParallelogramAB{ Vector2::Cross(edgeA, Vector2{ A.position.GetXY(), pixel}) };
+				const float signedAreaParallelogramAB{ Vector2::Cross(edgeA, Vector2{ A.position.GetXY(), pixel }) };
 				const float signedAreaParallelogramBC{ Vector2::Cross(edgeB, Vector2{ B.position.GetXY(), pixel }) };
 				const float signedAreaParallelogramCA{ Vector2::Cross(edgeC, Vector2{ C.position.GetXY(), pixel }) };
 				const float triangleArea = Vector2::Cross(edgeA, -edgeC);
@@ -705,6 +705,8 @@ void dae::Renderer::Render_W07_P1()
 			bbMax.x = Clamp(bbMax.x, 0.0f, float(m_Width));
 			bbMax.y = Clamp(bbMax.y, 0.0f, float(m_Height));
 
+
+
 			for (int py = int(bbMin.y); py < int(bbMax.y); ++py)
 			{
 				for (int px = int(bbMin.x); px < int(bbMax.x); ++px)
@@ -754,7 +756,7 @@ void dae::Renderer::Render_W07_P1()
 							(A.uv / A.position.z) * weightA +
 							(B.uv / B.position.z) * weightB +
 							(C.uv / C.position.z) * weightC
-						};						
+						};
 
 						uvInterpolated *= zInterpolated;
 
