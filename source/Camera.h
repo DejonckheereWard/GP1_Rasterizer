@@ -14,20 +14,23 @@ namespace dae
 	{
 		Camera() = default;
 
-		Camera(const Vector3& _origin, float _fovAngle):
-			origin{_origin},
-			fovAngle{_fovAngle}
+		Camera(const Vector3& _origin, float _fovAngle) :
+			origin{ _origin },
+			fovAngle{ _fovAngle }
 		{
 		}
 
 
 		Vector3 origin{};
-		float fovAngle{90.f};
+		float fovAngle{ 90.f };
 		float fov{ tanf((fovAngle * TO_RADIANS) / 2.f) };
+		const float far{ 100.f };
+		const float near{ 0.1f };
+		float aspectRatio{ 1.f };
 
-		Vector3 forward{Vector3::UnitZ};
-		Vector3 up{Vector3::UnitY};
-		Vector3 right{Vector3::UnitX};
+		Vector3 forward{ Vector3::UnitZ };
+		Vector3 up{ Vector3::UnitY };
+		Vector3 right{ Vector3::UnitX };
 
 		const float movementSpeed{ 7.0f };
 		const float rotationSpeed{ 40.0f };
@@ -39,14 +42,18 @@ namespace dae
 		Matrix invViewMatrix{};
 		Matrix viewMatrix{};
 
-		bool UpdateViewMatrix{true};
+		Matrix projectionMatrix{};
 
-		void Initialize(float _fovAngle = 90.f, Vector3 _origin = {0.f,0.f,0.f})
+		bool UpdateViewMatrix{ true };
+
+		void Initialize(float _fovAngle = 90.f, Vector3 _origin = { 0.f,0.f,0.f }, float _aspectRatio = 1.0f)
 		{
 			fovAngle = _fovAngle;
 			fov = tanf((fovAngle * TO_RADIANS) / 2.f);
-
+			aspectRatio = _aspectRatio;
 			origin = _origin;
+
+			CalculateProjectionMatrix();
 		}
 
 		void CalculateViewMatrix()
@@ -63,16 +70,14 @@ namespace dae
 			invViewMatrix = Matrix::CreateLookAtLH(origin, forward, up);
 			viewMatrix = invViewMatrix.Inverse();
 			UpdateViewMatrix = false;
-			
+
 
 		}
 
 		void CalculateProjectionMatrix()
 		{
-			//TODO W2
-
-			//ProjectionMatrix => Matrix::CreatePerspectiveFovLH(...) [not implemented yet]
-			//DirectX Implementation => https://learn.microsoft.com/en-us/windows/win32/direct3d9/d3dxmatrixperspectivefovlh
+			// W
+			projectionMatrix = Matrix::CreatePerspectiveFovLH(fov, aspectRatio, near, far);
 		}
 
 		void Update(Timer* pTimer)
@@ -171,7 +176,7 @@ namespace dae
 
 			if (hasMoved)
 			{
-				totalPitch =  Clamp(totalPitch, -89.9f, 89.9f);
+				totalPitch = Clamp(totalPitch, -89.9f, 89.9f);
 				if (totalYaw > 360.0f)
 					totalYaw -= 360.0f;
 				else if (totalYaw < 0.0f)

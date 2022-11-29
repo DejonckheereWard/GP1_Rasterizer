@@ -32,10 +32,17 @@ namespace dae
 		void Render();
 
 		bool SaveBufferToImage() const;
+		void ToggleRenderMode();
 
 	private:
+		enum class RenderMode
+		{
+			FinalColor,
+			DepthBuffer
+		};
+
 		SDL_Window* m_pWindow{};
-		
+
 		SDL_Surface* m_pFrontBuffer{ nullptr };
 		SDL_Surface* m_pBackBuffer{ nullptr };
 		uint32_t* m_pBackBufferPixels{};
@@ -44,9 +51,12 @@ namespace dae
 		float* m_pDepthBufferPixels{};
 
 		Camera m_Camera{};
+		std::vector<Mesh> m_Meshes{};
 
 		int m_Width{};
 		int m_Height{};
+
+		RenderMode m_CurrentRenderMode{ RenderMode::FinalColor };
 
 		//Function that transforms the vertices from the mesh from World space to Screen space
 		void VertexTransformationFunction(const std::vector<Vertex>& vertices_in, std::vector<Vertex>& vertices_out) const; //W1 Version
@@ -59,6 +69,11 @@ namespace dae
 		void Render_W06_P4();  // Depth buffer
 		void Render_W06_P5();  // Bounding box optimization
 #endif
+
 		void Render_W07_P1();
+
+		void Render_W08_P1();
+
+
 	};
 }

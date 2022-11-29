@@ -60,7 +60,7 @@ namespace dae {
 		return TransformPoint(p.x, p.y, p.z, p.w);
 	}
 
-	
+
 	Vector4 Matrix::TransformPoint(float x, float y, float z, float w) const
 	{
 		return Vector4{
@@ -162,11 +162,13 @@ namespace dae {
 
 	Matrix Matrix::CreatePerspectiveFovLH(float fov, float aspect, float zn, float zf)
 	{
-		//float yScale{ cosf(fov / 2.0f) / cosf()};
+		return {
+			{ 1.0f / (aspect * fov),	0.0f,		0.0f,					0.0f },
+			{ 0.0f,						1.0f / fov,	0.0f,					0.0f },
+			{ 0.0f,						0.0f,		zf / (zf - zn),			1.0f },
+			{ 0.0f,						0.0f,		-(zf * zn) / (zf - zn),	0.0f }
+		};
 
-		//float xScale = yScale 
-
-		return {};
 	}
 
 	Vector3 Matrix::GetAxisX() const
