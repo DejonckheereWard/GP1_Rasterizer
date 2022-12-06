@@ -33,6 +33,9 @@ namespace dae
 
 		bool SaveBufferToImage() const;
 		void ToggleRenderMode();
+		void ToggleRotation() { m_RotationEnabled = !m_RotationEnabled; }
+		void ToggleNormals();
+		void ToggleShadingMode();
 
 	private:
 		enum class RenderMode
@@ -41,12 +44,24 @@ namespace dae
 			DepthBuffer
 		};
 
+		enum class ShadingMode
+		{
+			Combined,
+			ObservedArea,
+			Diffuse,		// Include ObservedArea
+			Specular		// Include ObservedArea
+		};
+
 		SDL_Window* m_pWindow{};
 
 		SDL_Surface* m_pFrontBuffer{ nullptr };
 		SDL_Surface* m_pBackBuffer{ nullptr };
 		uint32_t* m_pBackBufferPixels{};
+
 		Texture* m_pTexture{ nullptr };
+		Texture* m_pNormal{ nullptr };
+		Texture* m_pSpecular{ nullptr };
+		Texture* m_pGloss{ nullptr };
 
 		float* m_pDepthBufferPixels{};
 
@@ -57,11 +72,17 @@ namespace dae
 		int m_Height{};
 
 		RenderMode m_CurrentRenderMode{ RenderMode::FinalColor };
+		ShadingMode m_CurrentShadingMode{ ShadingMode::Combined };
+		bool m_RotationEnabled{ true };
+		bool m_NormalsEnabled{ true };
+		float m_CurrentMeshRotation{ 0.0f };
 
 		//Function that transforms the vertices from the mesh from World space to Screen space
 		void VertexTransformationFunction(const std::vector<Vertex>& vertices_in, std::vector<Vertex>& vertices_out) const; //W1 Version
 		void VertexTransformationFunction(std::vector<Mesh>& meshes) const; //W1 Version
 		void ClearBackBuffer();
+		ColorRGB PixelShading(const Vertex_Out& vert);
+
 #ifdef Week06
 		void Render_W06_P1();  // Rasterizer stage only
 		void Render_W06_P2();  // Projection stage only

@@ -8,10 +8,11 @@
 #include "Matrix.h"
 #include "Texture.h"
 #include "Utils.h"
+#include <iostream>
 
 using namespace dae;
 
-Renderer::Renderer(SDL_Window* pWindow) :
+Renderer::Renderer(SDL_Window* pWindow):
 	m_pWindow(pWindow)
 {
 	//Initialize
@@ -25,13 +26,16 @@ Renderer::Renderer(SDL_Window* pWindow) :
 	m_pDepthBufferPixels = new float[m_Width * m_Height];
 
 	//Initialize Camera
-	m_Camera.Initialize(60.f, { .0f,5.0f,-30.f }, m_Width / (float)m_Height);
+	m_Camera.Initialize(45.f, { .0f,0.0f,0.f }, m_Width / (float)m_Height);
 
 	// Temp texture init
-	m_pTexture = Texture::LoadFromFile("./Resources/tuktuk.png");
+	m_pTexture = Texture::LoadFromFile("./Resources/vehicle_diffuse.png");
+	m_pNormal = Texture::LoadFromFile("./Resources/vehicle_normal.png");
+	m_pSpecular = Texture::LoadFromFile("./Resources/vehicle_specular.png");
+	m_pGloss = Texture::LoadFromFile("./Resources/vehicle_gloss.png");
 
 	Mesh& mesh = m_Meshes.emplace_back(Mesh{});
-	Utils::ParseOBJ("Resources/tuktuk.obj", mesh.vertices, mesh.indices);
+	Utils::ParseOBJ("Resources/vehicle.obj", mesh.vertices, mesh.indices);
 	mesh.primitiveTopology = PrimitiveTopology::TriangleList;
 }
 
@@ -44,6 +48,18 @@ Renderer::~Renderer()
 void Renderer::Update(Timer* pTimer)
 {
 	m_Camera.Update(pTimer);
+
+
+	if(m_RotationEnabled)
+	{
+		m_CurrentMeshRotation += 0.5f * pTimer->GetElapsed();
+		for(Mesh& mesh : m_Meshes)
+		{
+			Matrix translationMatrix = Matrix::CreateTranslation(0.f, 0.f, 50.f);
+			Matrix rotationMatrix = Matrix::CreateRotationY(m_CurrentMeshRotation);
+			mesh.worldMatrix = rotationMatrix * translationMatrix;
+		}
+	}
 }
 
 void Renderer::Render()
@@ -97,7 +113,7 @@ void Renderer::VertexTransformationFunction(const std::vector<Vertex>& vertices_
 	vertices_out.clear();
 	vertices_out.reserve(vertices_in.size());
 
-	for (const Vertex& vert : vertices_in)
+	for(const Vertex& vert : vertices_in)
 	{
 		// World to camera (View Space)
 		Vector3 viewSpaceVertex = m_Camera.viewMatrix.TransformPoint(vert.position);  // Transform the position
@@ -168,16 +184,14 @@ void Renderer::VertexTransformationFunction(std::vector<Mesh>& meshes) const
 #pragma region Week08
 
 
-	for (Mesh& mesh : meshes)
+	for(Mesh& mesh : meshes)
 	{
-		// Calculate WorldViewProjectionmatrix for every mesh
-
-
-		Matrix worldViewProjectionMatrix = mesh.worldMatrix * m_Camera.viewMatrix * m_Camera.projectionMatrix;
+		// Calculate WorldViewProjectionmatrix for every mesh	
+		Matrix worldViewProjectionMatrix = mesh.worldMatrix * (m_Camera.viewMatrix * m_Camera.projectionMatrix);
 
 		mesh.vertices_out.clear();
 		mesh.vertices_out.reserve(mesh.vertices.size());
-		for (const Vertex& vert : mesh.vertices)
+		for(const Vertex& vert : mesh.vertices)
 		{
 			// World to camera (view space)
 			Vector4 newPosition = worldViewProjectionMatrix.TransformPoint({ vert.position, 1.0f });
@@ -188,27 +202,24 @@ void Renderer::VertexTransformationFunction(std::vector<Mesh>& meshes) const
 			newPosition.z /= newPosition.w;
 			//newPosition.w = newPosition.w;
 
-			// Now our coords are defined in x -> [-1, 1], y -> [-1, 1], z -> [0, 1], w -> z in viewspace
-			//assert(abs(newPosition.x) <= (1.0f + FLT_EPSILON));
-			//assert(abs(newPosition.y) <= (1.0f + FLT_EPSILON));
-			//assert(newPosition.z >= -FLT_EPSILON && newPosition.z <= (1.0f + FLT_EPSILON));
+			// Our coords are now in NDC space
 
+			// Multiply the normals and tangents with the worldmatrix to convert them to worldspace
+			 //We only want to rotate them, so use transformvector, and normalize after
+			const Vector3 newNormal = mesh.worldMatrix.TransformVector(vert.normal).Normalized();
+			const Vector3 newTangent = mesh.worldMatrix.TransformVector(vert.tangent).Normalized();
 
-			//// Transform to screen space / raster space
-			//newPosition.x = (newPosition.x + 1) / 2.0f * m_Width; // Screen X
-			//newPosition.y = (1 - newPosition.y) / 2.0f * m_Height; // Screen Y,
-			////newPosition.z = newPosition.z;
-			//newPosition.w = newPosition.w;
-
+			// Calculate vert world position
+			const Vector3 vertPosition{ mesh.worldMatrix.TransformPoint(vert.position)};
 
 			// Store the new position in the vertices out as Vertex out, because this one has a position 4 / vector4
 			Vertex_Out& outVert = mesh.vertices_out.emplace_back(Vertex_Out{});
 			outVert.position = newPosition;
 			outVert.color = vert.color;
 			outVert.uv = vert.uv;
-			outVert.normal = vert.normal;
-			outVert.tangent = vert.tangent;
-			outVert.viewDirection = vert.viewDirection;
+			outVert.normal = newNormal;
+			outVert.tangent = newTangent;
+			outVert.viewDirection = { m_Camera.origin - vertPosition };
 		}
 	}
 
@@ -216,16 +227,7 @@ void Renderer::VertexTransformationFunction(std::vector<Mesh>& meshes) const
 }
 
 
-void dae::Renderer::ClearBackBuffer()
-{
-	ColorRGB clearColor{ 100, 100, 100 };
 
-	uint32_t hexColor = 0xFF000000 | (uint32_t)clearColor.b << 16 | (uint32_t)clearColor.g << 8 | (uint32_t)clearColor.r;
-	SDL_FillRect(m_pBackBuffer, NULL, hexColor);
-
-	//SDL_FillRect(m_pBackBuffer, &m_pBackBuffer->clip_rect, SDL_MapRGB(m_pBackBuffer->format, clearColor.r, clearColor.g, clearColor.b));
-
-}
 
 #ifdef Week06
 void dae::Renderer::Render_W06_P1()
@@ -244,7 +246,7 @@ void dae::Renderer::Render_W06_P1()
 	// Check if pixel is in the triangle (screen space)
 
 	std::vector<Vector2> vertices_screen;
-	for (const Vector3& vert : vertices_ndc)
+	for(const Vector3& vert : vertices_ndc)
 	{
 		// Screenspace has left top as 0 0, and bottom right at screenwidth screenheight, while normalized device space, starts at left bottom as -1, -1
 		// and goes to top right 1, 1.
@@ -260,9 +262,9 @@ void dae::Renderer::Render_W06_P1()
 	}
 
 
-	for (int py = 0; py < m_Height; ++py)
+	for(int py = 0; py < m_Height; ++py)
 	{
-		for (int px = 0; px < m_Width; ++px)
+		for(int px = 0; px < m_Width; ++px)
 		{
 			Vector2 pixel{ float(px) + 0.5f, float(py) + 0.5f };  // Define pixel as 2D point (take center of the pixel)
 
@@ -279,7 +281,7 @@ void dae::Renderer::Render_W06_P1()
 			isInside &= Vector2::Cross(edgeB, Vector2{ vertices_screen[1], pixel }) >= 0.0f;
 			isInside &= Vector2::Cross(edgeC, Vector2{ vertices_screen[2], pixel }) >= 0.0f;
 
-			if (isInside)
+			if(isInside)
 			{
 				//		ColorRGB finalColor{ gradient, gradient, gradient };
 
@@ -311,9 +313,9 @@ void dae::Renderer::Render_W06_P2()
 	// Load the texture
 
 
-	for (int py = 0; py < m_Height; ++py)
+	for(int py = 0; py < m_Height; ++py)
 	{
-		for (int px = 0; px < m_Width; ++px)
+		for(int px = 0; px < m_Width; ++px)
 		{
 			Vector2 pixel{ float(px) + 0.5f, float(py) + 0.5f };  // Define pixel as 2D point (take center of the pixel)
 
@@ -337,7 +339,7 @@ void dae::Renderer::Render_W06_P2()
 			isInside &= Vector2::Cross(edgeC, Vector2{ C, pixel }) >= 0.0f;
 
 			ColorRGB finalColor{ 0.0f, 0.0f, 0.0f };
-			if (isInside)
+			if(isInside)
 			{
 				// ColorRGB finalColor{ gradient, gradient, gradient };
 				//Update Color in Buffer
@@ -370,9 +372,9 @@ void dae::Renderer::Render_W06_P3()
 	VertexTransformationFunction(vertices_world, vertices_screen);
 
 
-	for (int py = 0; py < m_Height; ++py)
+	for(int py = 0; py < m_Height; ++py)
 	{
-		for (int px = 0; px < m_Width; ++px)
+		for(int px = 0; px < m_Width; ++px)
 		{
 			Vector2 pixel{ float(px) + 0.5f, float(py) + 0.5f };  // Define pixel as 2D point (take center of the pixel)
 
@@ -404,7 +406,7 @@ void dae::Renderer::Render_W06_P3()
 
 
 			ColorRGB finalColor{ 0.0f, 0.0f, 0.0f };
-			if (isInside)
+			if(isInside)
 			{
 				const float weightA{ signedAreaParallelogramAB / triangleArea };
 				const float weightB{ signedAreaParallelogramBC / triangleArea };
@@ -454,11 +456,11 @@ void dae::Renderer::Render_W06_P4()
 
 
 
-	for (int triangleIndex = 0; triangleIndex < vertices_screen.size(); triangleIndex += 3)
+	for(int triangleIndex = 0; triangleIndex < vertices_screen.size(); triangleIndex += 3)
 	{
-		for (int py = 0; py < m_Height; ++py)
+		for(int py = 0; py < m_Height; ++py)
 		{
-			for (int px = 0; px < m_Width; ++px)
+			for(int px = 0; px < m_Width; ++px)
 			{
 				Vector2 pixel{ float(px) + 0.5f, float(py) + 0.5f };  // Define pixel as 2D point (take center of the pixel)
 
@@ -487,7 +489,7 @@ void dae::Renderer::Render_W06_P4()
 				isInside &= signedAreaParallelogramBC >= 0.0f;
 				isInside &= signedAreaParallelogramCA >= 0.0f;
 
-				if (isInside)
+				if(isInside)
 				{
 					// Get the weights of each vertex
 					const float weightA{ signedAreaParallelogramAB / triangleArea };
@@ -504,7 +506,7 @@ void dae::Renderer::Render_W06_P4()
 
 
 					// Check the depth buffer
-					if (currentDepth > m_pDepthBufferPixels[px + (py * m_Width)])
+					if(currentDepth > m_pDepthBufferPixels[px + (py * m_Width)])
 						continue;
 
 					m_pDepthBufferPixels[px + (py * m_Width)] = currentDepth;
@@ -549,7 +551,7 @@ void dae::Renderer::Render_W06_P5()
 
 
 
-	for (int triangleIndex = 0; triangleIndex < vertices_screen.size(); triangleIndex += 3)
+	for(int triangleIndex = 0; triangleIndex < vertices_screen.size(); triangleIndex += 3)
 	{
 		// Vertices of the Triangle
 		const Vertex A{ vertices_screen[triangleIndex + 0] };
@@ -576,9 +578,9 @@ void dae::Renderer::Render_W06_P5()
 		bbMax.x = Clamp(bbMax.x, 0.0f, float(m_Width));
 		bbMax.y = Clamp(bbMax.y, 0.0f, float(m_Height));
 
-		for (int py = int(bbMin.y); py < int(bbMax.y); ++py)
+		for(int py = int(bbMin.y); py < int(bbMax.y); ++py)
 		{
-			for (int px = int(bbMin.x); px < int(bbMax.x); ++px)
+			for(int px = int(bbMin.x); px < int(bbMax.x); ++px)
 			{
 				// Get the current pixel into a vector
 				Vector2 pixel{ float(px) + 0.5f, float(py) + 0.5f };  // Define pixel as 2D point (take center of the pixel)
@@ -595,7 +597,7 @@ void dae::Renderer::Render_W06_P5()
 				isInside &= signedAreaParallelogramBC >= 0.0f;
 				isInside &= signedAreaParallelogramCA >= 0.0f;
 
-				if (isInside)
+				if(isInside)
 				{
 					// Get the weights of each vertex
 					const float weightA{ signedAreaParallelogramBC / triangleArea };
@@ -612,7 +614,7 @@ void dae::Renderer::Render_W06_P5()
 
 
 					// Check the depth buffer
-					if (currentDepth > m_pDepthBufferPixels[px + (py * m_Width)])
+					if(currentDepth > m_pDepthBufferPixels[px + (py * m_Width)])
 						continue;
 
 					m_pDepthBufferPixels[px + (py * m_Width)] = currentDepth;
@@ -700,16 +702,16 @@ void dae::Renderer::Render_W07_P1()
 
 	VertexTransformationFunction(meshes);
 
-	for (const Mesh& mesh : meshes)
+	for(const Mesh& mesh : meshes)
 	{
 		//VertexTransformationFunction(mesh.vertices, mesh_screen.vertices);
 
 		// If triangle strip, move only one position per itteration & inverse the direction on every odd loop
 		int increment = 3;
-		if (mesh.primitiveTopology == PrimitiveTopology::TriangleStrip)
+		if(mesh.primitiveTopology == PrimitiveTopology::TriangleStrip)
 			increment = 1;
 
-		for (int indiceIdx = 0; indiceIdx < mesh.indices.size() - 2; indiceIdx += increment)
+		for(int indiceIdx = 0; indiceIdx < mesh.indices.size() - 2; indiceIdx += increment)
 		{
 			// Get the vertices using the indice numbers
 			uint32_t indiceA{ mesh.indices[indiceIdx] };
@@ -722,20 +724,20 @@ void dae::Renderer::Render_W07_P1()
 
 			// If triangle strip, move only one position per itteration & inverse the direction on every odd loop
 
-			if (mesh.primitiveTopology == PrimitiveTopology::TriangleStrip)
+			if(mesh.primitiveTopology == PrimitiveTopology::TriangleStrip)
 			{
 				// Check if least significant bit is 1 (odd number)
-				if ((indiceIdx & 1) == 1)
+				if((indiceIdx & 1) == 1)
 					std::swap(B, C);
 
 				// Check if any vertices of the triangle are the same (and thus the triangle has 0 area / should not be rendered)
-				if (indiceA == indiceB)
+				if(indiceA == indiceB)
 					continue;
 
-				if (indiceB == indiceC)
+				if(indiceB == indiceC)
 					continue;
 
-				if (indiceC == indiceA)
+				if(indiceC == indiceA)
 					continue;
 			}
 
@@ -761,9 +763,9 @@ void dae::Renderer::Render_W07_P1()
 
 
 
-			for (int py = int(bbMin.y); py < int(bbMax.y); ++py)
+			for(int py = int(bbMin.y); py < int(bbMax.y); ++py)
 			{
-				for (int px = int(bbMin.x); px < int(bbMax.x); ++px)
+				for(int px = int(bbMin.x); px < int(bbMax.x); ++px)
 				{
 					// Get the current pixel into a vector
 					Vector2 pixel{ float(px) + 0.5f, float(py) + 0.5f };  // Define pixel as 2D point (take center of the pixel)
@@ -780,7 +782,7 @@ void dae::Renderer::Render_W07_P1()
 					isInside &= signedAreaParallelogramBC >= 0.0f;
 					isInside &= signedAreaParallelogramCA >= 0.0f;
 
-					if (isInside)
+					if(isInside)
 					{
 						// Get the weights of each vertex
 						const float weightA{ signedAreaParallelogramBC / triangleArea };
@@ -796,7 +798,7 @@ void dae::Renderer::Render_W07_P1()
 						const float zInterpolated = 1.0f / ((A.position.w * weightA) + (B.position.w * weightB) + (C.position.w * weightC));
 
 						// Check the depth buffer
-						if (zInterpolated > m_pDepthBufferPixels[px + (py * m_Width)])
+						if(zInterpolated > m_pDepthBufferPixels[px + (py * m_Width)])
 							continue;
 
 						m_pDepthBufferPixels[px + (py * m_Width)] = zInterpolated;
@@ -837,16 +839,16 @@ void dae::Renderer::Render_W08_P1()
 
 	VertexTransformationFunction(m_Meshes);
 
-	for (const Mesh& mesh : m_Meshes)
+	for(const Mesh& mesh : m_Meshes)
 	{
 		//VertexTransformationFunction(mesh.vertices, mesh_screen.vertices);
 
 		// If triangle strip, move only one position per itteration & inverse the direction on every odd loop
 		int increment = 3;
-		if (mesh.primitiveTopology == PrimitiveTopology::TriangleStrip)
+		if(mesh.primitiveTopology == PrimitiveTopology::TriangleStrip)
 			increment = 1;
 
-		for (int indiceIdx = 0; indiceIdx < mesh.indices.size() - 2; indiceIdx += increment)
+		for(int indiceIdx = 0; indiceIdx < mesh.indices.size() - 2; indiceIdx += increment)
 		{
 			// Get the vertices using the indice numbers
 			uint32_t indiceA{ mesh.indices[indiceIdx] };
@@ -859,45 +861,47 @@ void dae::Renderer::Render_W08_P1()
 
 			// If triangle strip, move only one position per itteration & inverse the direction on every odd loop
 
-			if (mesh.primitiveTopology == PrimitiveTopology::TriangleStrip)
+			if(mesh.primitiveTopology == PrimitiveTopology::TriangleStrip)
 			{
 				// Check if least significant bit is 1 (odd number)
-				if ((indiceIdx & 1) == 1)
+				if((indiceIdx & 1) == 1)
 					std::swap(B, C);
 
 				// Check if any vertices of the triangle are the same (and thus the triangle has 0 area / should not be rendered)
-				if (indiceA == indiceB)
+				if(indiceA == indiceB)
 					continue;
 
-				if (indiceB == indiceC)
+				if(indiceB == indiceC)
 					continue;
 
-				if (indiceC == indiceA)
+				if(indiceC == indiceA)
 					continue;
+
 			}
 
 
 			// Do frustum culling
-			if (A.position.z < 0.0f || A.position.z > 1.0f)
+			if(A.position.z < 0.0f || A.position.z > 1.0f)
 				continue;
-			if (B.position.z < 0.0f || B.position.z > 1.0f)
+			if(B.position.z < 0.0f || B.position.z > 1.0f)
 				continue;
-			if (C.position.z < 0.0f || C.position.z > 1.0f)
-				continue;
-
-			if (A.position.x < -1.0f || A.position.x > 1.0f)
-				continue;
-			if (B.position.x < -1.0f || B.position.x > 1.0f)
-				continue;
-			if (C.position.x < -1.0f || C.position.x > 1.0f)
+			if(C.position.z < 0.0f || C.position.z > 1.0f)
 				continue;
 
-			if (A.position.y < -1.0f || A.position.y > 1.0f)
-				continue;
-			if (B.position.y < -1.0f || B.position.y > 1.0f)
-				continue;
-			if (C.position.y < -1.0f || C.position.y > 1.0f)
-				continue;
+			if(A.position.x < -1.0f || A.position.x > 1.0f)
+				//continue;
+				if(B.position.x < -1.0f || B.position.x > 1.0f)
+					//continue;
+					if(C.position.x < -1.0f || C.position.x > 1.0f)
+						continue;
+
+			if(A.position.y < -1.0f || A.position.y > 1.0f)
+				//continue;
+				if(B.position.y < -1.0f || B.position.y > 1.0f)
+					//continue;
+					if(C.position.y < -1.0f || C.position.y > 1.0f)
+						continue;
+
 
 			// Convert from NDC to ScreenSpace
 			A.position.x = (A.position.x + 1) / 2.0f * m_Width; // Screen X
@@ -930,9 +934,9 @@ void dae::Renderer::Render_W08_P1()
 
 
 
-			for (int py = int(bbMin.y); py < int(bbMax.y); ++py)
+			for(int py = int(bbMin.y); py < int(ceil(bbMax.y)); ++py)
 			{
-				for (int px = int(bbMin.x); px < int(bbMax.x); ++px)
+				for(int px = int(bbMin.x); px < int(ceil(bbMax.x)); ++px)
 				{
 					// Get the current pixel into a vector
 					Vector2 pixel{ float(px) + 0.5f, float(py) + 0.5f };  // Define pixel as 2D point (take center of the pixel)
@@ -948,7 +952,7 @@ void dae::Renderer::Render_W08_P1()
 					isInside &= signedAreaParallelogramBC >= 0.0f;
 					isInside &= signedAreaParallelogramCA >= 0.0f;
 
-					if (isInside)
+					if(isInside)
 					{
 						// Perform clipping
 						//if (A.position.x < -1.0f || A.position.x > 1.0f)
@@ -973,7 +977,7 @@ void dae::Renderer::Render_W08_P1()
 							((1.0f / A.position.z) * weightA + (1.0f / B.position.z) * weightB + (1.0f / C.position.z) * weightC);
 
 						// Check the depth buffer
-						if (zBuffer > m_pDepthBufferPixels[px + (py * m_Width)])
+						if(zBuffer > m_pDepthBufferPixels[px + (py * m_Width)])
 							continue;
 
 						m_pDepthBufferPixels[px + (py * m_Width)] = zBuffer;
@@ -981,31 +985,83 @@ void dae::Renderer::Render_W08_P1()
 						float wInterpolated = 1.0f /
 							((1.0f / A.position.w) * weightA + (1.0f / B.position.w) * weightB + (1.0f / C.position.w) * weightC);
 
-
+						// Get the interpolated UV
 						Vector2 uvInterpolated{
 							(A.uv / A.position.w) * weightA +
 							(B.uv / B.position.w) * weightB +
 							(C.uv / C.position.w) * weightC
 						};
-
 						uvInterpolated *= wInterpolated;
 
+						// Get the interpolated color
+						ColorRGB colorInterpolated{
+							(A.color / A.position.w) * weightA +
+							(B.color / B.position.w) * weightB +
+							(C.color / C.position.w) * weightC
+						};
+						colorInterpolated *= wInterpolated;
+
+						// Get the interpolated normal
+						Vector3 normalInterpolated{
+							(A.normal / A.position.w) * weightA +
+							(B.normal / B.position.w) * weightB +
+							(C.normal / C.position.w) * weightC
+						};
+						normalInterpolated *= wInterpolated;
+						normalInterpolated.Normalize();
+
+						// Get the interpolated tangent
+						Vector3 tangentInterpolated{
+							(A.tangent / A.position.w) * weightA +
+							(B.tangent / B.position.w) * weightB +
+							(C.tangent / C.position.w) * weightC
+						};
+						tangentInterpolated *= wInterpolated;
+						tangentInterpolated.Normalize();
+
+						// Get the interpolated viewdirection
+						Vector3 viewDirectionInterpolated{
+							(A.viewDirection / A.position.w) * weightA +
+							(B.viewDirection / B.position.w) * weightB +
+							(C.viewDirection / C.position.w) * weightC
+						};
+						viewDirectionInterpolated *= wInterpolated;
+						viewDirectionInterpolated.Normalize();
+
+
+						Vertex_Out vertexOut{};
+						vertexOut.position = Vector4{ pixel.x, pixel.y, zBuffer, wInterpolated };
+						vertexOut.color = colorInterpolated;
+						vertexOut.uv = uvInterpolated;
+						vertexOut.normal = normalInterpolated;
+						vertexOut.tangent = tangentInterpolated;
+						vertexOut.viewDirection = viewDirectionInterpolated;
+
+						//PixelShading(vertexOut);
+
 						ColorRGB finalColor{};
-						switch (m_CurrentRenderMode)
+						switch(m_CurrentRenderMode)
 						{
-						case dae::Renderer::RenderMode::FinalColor:
-							finalColor = { m_pTexture->Sample(uvInterpolated) };
-							break;
-						case dae::Renderer::RenderMode::DepthBuffer:
-						{
-							float depthColor = (zBuffer - 0.985f) * (1.0f / (1.0f - 0.985f));
+							case dae::Renderer::RenderMode::FinalColor:
+								finalColor = PixelShading(vertexOut);
+								//finalColor = { m_pTexture->Sample(uvInterpolated) };
+								break;
+							case dae::Renderer::RenderMode::DepthBuffer:
+							{
+								const float remapMin{ 0.985f };
+								const float remapMax{ 1.0f };
 
-							finalColor = { depthColor, depthColor, depthColor };
+								float depthColor = (Clamp(zBuffer, remapMin, remapMax) - remapMin) * (1.0f / (remapMax - remapMin));
+								//depthColor = 1.0f - depthColor;  // Invert white and black
 
-						}
-						break;
-						default:
+
+
+								finalColor = { depthColor, depthColor, depthColor };
+
+							}
 							break;
+							default:
+								break;
 						}
 
 						finalColor.MaxToOne();
@@ -1019,6 +1075,120 @@ void dae::Renderer::Render_W08_P1()
 			}
 		}
 	}
+}
+
+
+
+ColorRGB dae::Renderer::PixelShading(const Vertex_Out& vert)
+{
+	const Vector3 lightDirection{ .577f, -.577f, .577f };
+	const ColorRGB lightColor{ 1.0f, 1.0f, 1.0f };
+	const float lightIntensity{ 7.0f };
+	const ColorRGB lightRadiance{ lightColor * lightIntensity };
+	const float specularGlossiness{ 25.0f };  // Shininess
+	const ColorRGB ambientColor{ 0.025f, 0.025f, 0.025f };
+
+	const ColorRGB diffuseColorSample{ m_pTexture->Sample(vert.uv) };
+	const ColorRGB specularColorSample{ m_pSpecular->Sample(vert.uv) };
+	const ColorRGB normalColorSample{ m_pNormal->Sample(vert.uv) };
+	const ColorRGB glossinessColor{ m_pGloss->Sample(vert.uv) };
+
+
+	//// Calculate tangent space axis
+	const Vector3 binormal{ Vector3::Cross(vert.normal, vert.tangent) };
+	const Matrix tangentSpaceAxis{ Matrix{ vert.tangent, binormal, vert.normal, {0,0,0} } };  // {} = 0 vector
+
+	 ////Calculate normal in tangent space
+	const Vector3 tangentNormal{ normalColorSample.r * 2.0f - 1.0f, normalColorSample.g * 2.0f - 1.0f, normalColorSample.b * 2.0f - 1.0f };
+	const Vector3 normalInTangentSpace{ tangentSpaceAxis.TransformVector(tangentNormal.Normalized()).Normalized() };
+
+	//// Select normal based on settings
+	const Vector3 currentNormal{ m_NormalsEnabled ? normalInTangentSpace : vert.normal };
+
+	//// Calculate observed area / lambert Cosine
+	const float observedArea{ Vector3::Dot(currentNormal, -lightDirection) };
+
+	if(observedArea < 0.0f)
+		return { 0,0,0 };
+	
+
+	// Calculate lambert
+	const ColorRGB lambertDiffuse{ (1.0f * diffuseColorSample) / PI };
+
+	// Calculate phong
+	const Vector3 reflect{ lightDirection - (2.0f * Vector3::Dot(currentNormal, lightDirection) * currentNormal) };
+	const float RdotV{ std::max(0.0f, Vector3::Dot(reflect, vert.viewDirection)) };
+	const ColorRGB phongSpecular{ specularColorSample * powf(RdotV, glossinessColor.r * specularGlossiness) }; // Glosinness map is greyscale, ro r g and b are the same
+
+	switch(m_CurrentShadingMode)
+	{
+		case dae::Renderer::ShadingMode::Combined:
+			return ((lightRadiance * lambertDiffuse) + phongSpecular + ambientColor) * observedArea;
+			break;
+		case dae::Renderer::ShadingMode::ObservedArea:
+			return ColorRGB{ observedArea, observedArea, observedArea };
+			break;
+		case dae::Renderer::ShadingMode::Diffuse:
+			return lightRadiance * lambertDiffuse * observedArea;
+			break;
+		case dae::Renderer::ShadingMode::Specular:
+			return phongSpecular;
+			break;
+		default:
+			return { 0.f, 0.f, 0.5f };
+			break;
+	}
+
+}
+
+void dae::Renderer::ToggleNormals()
+{
+	m_NormalsEnabled = !m_NormalsEnabled;
+	if(m_NormalsEnabled)
+	{
+		std::cout << "Normal map\n";
+	}
+	else
+	{
+		std::cout << "Vert normals\n";
+	}
+}
+
+void dae::Renderer::ToggleShadingMode()
+{
+	switch(m_CurrentShadingMode)
+	{
+		case dae::Renderer::ShadingMode::Combined:
+			m_CurrentShadingMode = ShadingMode::ObservedArea;
+			std::cout << "ShadingMode: ObservedArea\n";
+			break;
+		case dae::Renderer::ShadingMode::ObservedArea:
+			m_CurrentShadingMode = ShadingMode::Diffuse;
+			std::cout << "ShadingMode: Diffuse\n";
+			break;
+		case dae::Renderer::ShadingMode::Diffuse:
+			m_CurrentShadingMode = ShadingMode::Specular;
+			std::cout << "ShadingMode: Specular\n";
+			break;
+		case dae::Renderer::ShadingMode::Specular:
+			m_CurrentShadingMode = ShadingMode::Combined;
+			std::cout << "ShadingMode: Combined\n";
+			break;
+		default:
+			assert(false); // Should never hit this
+			break;
+	}
+}
+
+void dae::Renderer::ClearBackBuffer()
+{
+	ColorRGB clearColor{ 100, 100, 100 };
+
+	uint32_t hexColor = 0xFF000000 | (uint32_t)clearColor.b << 16 | (uint32_t)clearColor.g << 8 | (uint32_t)clearColor.r;
+	SDL_FillRect(m_pBackBuffer, NULL, hexColor);
+
+	//SDL_FillRect(m_pBackBuffer, &m_pBackBuffer->clip_rect, SDL_MapRGB(m_pBackBuffer->format, clearColor.r, clearColor.g, clearColor.b));
+
 }
 
 bool Renderer::SaveBufferToImage() const

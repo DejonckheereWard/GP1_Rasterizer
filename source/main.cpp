@@ -37,7 +37,7 @@ int main(int argc, char* args[])
 		SDL_WINDOWPOS_UNDEFINED,
 		width, height, 0);
 
-	if (!pWindow)
+	if(!pWindow)
 		return 1;
 
 	//Initialize "framework"
@@ -49,23 +49,34 @@ int main(int argc, char* args[])
 	float printTimer = 0.f;
 	bool isLooping = true;
 	bool takeScreenshot = false;
-	while (isLooping)
+	while(isLooping)
 	{
 		//--------- Get input events ---------
 		SDL_Event e;
-		while (SDL_PollEvent(&e))
+		while(SDL_PollEvent(&e))
 		{
-			switch (e.type)
+			switch(e.type)
 			{
-			case SDL_QUIT:
-				isLooping = false;
-				break;
-			case SDL_KEYUP:
-				if (e.key.keysym.scancode == SDL_SCANCODE_X)
-					takeScreenshot = true;
-				if (e.key.keysym.scancode == SDL_SCANCODE_F4)
-					pRenderer->ToggleRenderMode();
-				break;
+				case SDL_QUIT:
+					isLooping = false;
+					break;
+				case SDL_KEYUP:
+					if(e.key.keysym.scancode == SDL_SCANCODE_X)
+						takeScreenshot = true;
+
+					if(e.key.keysym.scancode == SDL_SCANCODE_F4)
+						pRenderer->ToggleRenderMode();
+
+					if(e.key.keysym.scancode == SDL_SCANCODE_F5)
+						pRenderer->ToggleRotation();
+
+					if(e.key.keysym.scancode == SDL_SCANCODE_F6)
+						pRenderer->ToggleNormals();
+
+					if(e.key.keysym.scancode == SDL_SCANCODE_F7)
+						pRenderer->ToggleShadingMode();
+
+					break;
 			}
 		}
 
@@ -78,16 +89,16 @@ int main(int argc, char* args[])
 		//--------- Timer ---------
 		pTimer->Update();
 		printTimer += pTimer->GetElapsed();
-		if (printTimer >= 1.f)
+		if(printTimer >= 1.f)
 		{
 			printTimer = 0.f;
 			std::cout << "dFPS: " << pTimer->GetdFPS() << std::endl;
 		}
 
 		//Save screenshot after full render
-		if (takeScreenshot)
+		if(takeScreenshot)
 		{
-			if (!pRenderer->SaveBufferToImage())
+			if(!pRenderer->SaveBufferToImage())
 				std::cout << "Screenshot saved!" << std::endl;
 			else
 				std::cout << "Something went wrong. Screenshot not saved!" << std::endl;

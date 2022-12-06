@@ -32,8 +32,8 @@ namespace dae
 		Vector3 up{ Vector3::UnitY };
 		Vector3 right{ Vector3::UnitX };
 
-		const float movementSpeed{ 7.0f };
-		const float rotationSpeed{ 40.0f };
+		const float movementSpeed{ 15.0f };
+		const float rotationSpeed{ 30.0f };
 		const float keyboardRotationSpeed{ 80.0f };
 
 		float totalPitch{};
