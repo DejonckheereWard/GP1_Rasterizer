@@ -5,7 +5,7 @@
 
 namespace dae
 {
-	Texture::Texture(SDL_Surface* pSurface) :
+	Texture::Texture(SDL_Surface* pSurface):
 		m_pSurface{ pSurface },
 		m_pSurfacePixels{ (uint32_t*)pSurface->pixels }
 	{
@@ -13,7 +13,7 @@ namespace dae
 
 	Texture::~Texture()
 	{
-		if (m_pSurface)
+		if(m_pSurface)
 		{
 			SDL_FreeSurface(m_pSurface);
 			m_pSurface = nullptr;
@@ -39,44 +39,52 @@ namespace dae
 		int x = 0;
 		int y = 0;
 
-		switch (uvMode)
+		switch(uvMode)
 		{
-			
-		case dae::UVMode::Wrap:
-		{
-			float uvX = uv.x;
-			float uvY = uv.y;
-			
-			if (uvX < 0)
-				uvX += abs(int(uvX)) + 1;
-			if (uvY < 0)
-				uvY += abs(int(uvY)) + 1;
 
-			x = int(uvX * m_pSurface->w) % m_pSurface->w;
-			y = int(uvY * m_pSurface->h) % m_pSurface->h;
-			break;
-		}
-		
-		case dae::UVMode::Clamp:
-			x = int(uv.x * m_pSurface->w);
-			y = int(uv.y * m_pSurface->h);
-			x = Clamp(x, 0, m_pSurface->w);
-			y = Clamp(y, 0, m_pSurface->h);
-			break;
-			
-		case dae::UVMode::Mirror:
-			x = int(uv.x * m_pSurface->w);
-			y = int(uv.y * m_pSurface->h);
-			if (x % 2 == 0)
-				x = x % m_pSurface->w;
-			else
-				x = m_pSurface->w - (x % m_pSurface->w);
-			break;
-			
-		default:
-			assert(false && "Shouldn't ever hit this in the switch");
-			break;
-			
+			case dae::UVMode::Wrap:
+			{
+				float uvX = uv.x;
+				float uvY = uv.y;
+
+				if(uvX < 0)
+					uvX += abs(int(uvX)) + 1;
+				if(uvY < 0)
+					uvY += abs(int(uvY)) + 1;
+
+				x = int(uvX * m_pSurface->w) % m_pSurface->w;
+				y = int(uvY * m_pSurface->h) % m_pSurface->h;
+				break;
+			}
+
+			case dae::UVMode::Clamp:
+				x = int(uv.x * m_pSurface->w);
+				y = int(uv.y * m_pSurface->h);
+				x = Clamp(x, 0, m_pSurface->w);
+				y = Clamp(y, 0, m_pSurface->h);
+				break;
+
+			case dae::UVMode::Mirror:
+				x = int(uv.x * m_pSurface->w);
+				y = int(uv.y * m_pSurface->h);
+				if(x % 2 == 0)
+					x = x % m_pSurface->w;
+				else
+					x = m_pSurface->w - (x % m_pSurface->w);
+				break;
+
+			case UVMode::Border:
+				x = int(uv.x * m_pSurface->w);
+				y = int(uv.y * m_pSurface->h);
+				if(x < 0 || x >= m_pSurface->w || y < 0 || y >= m_pSurface->h)
+					return ColorRGB{ 1.0f,0,1.0f };
+				break;
+
+
+			default:
+				assert(false && "Shouldn't ever hit this in the switch");
+				break;
+
 		}
 
 		// pixel color is in 0-255 ranges  0xFF FF FF FF -> ALPHA, BLUE, GREEN, RED

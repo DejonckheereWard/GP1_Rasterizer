@@ -14,7 +14,7 @@ namespace dae
 	{
 		Camera() = default;
 
-		Camera(const Vector3& _origin, float _fovAngle) :
+		Camera(const Vector3& _origin, float _fovAngle):
 			origin{ _origin },
 			fovAngle{ _fovAngle }
 		{
@@ -58,7 +58,7 @@ namespace dae
 
 		void CalculateViewMatrix()
 		{
-			if (!UpdateViewMatrix)
+			if(!UpdateViewMatrix)
 				return;
 			//TODO W1
 			//ONB => invViewMatrix
@@ -76,7 +76,6 @@ namespace dae
 
 		void CalculateProjectionMatrix()
 		{
-			// W
 			projectionMatrix = Matrix::CreatePerspectiveFovLH(fov, aspectRatio, near, far);
 		}
 
@@ -94,66 +93,66 @@ namespace dae
 			const uint32_t mouseState = SDL_GetRelativeMouseState(&mouseX, &mouseY);
 
 			// Keyboard movement of the camera
-			if (pKeyboardState[SDL_SCANCODE_W])
+			if(pKeyboardState[SDL_SCANCODE_W])
 			{
 				origin += forward * movementSpeed * deltaTime;
 				hasMoved = true;
 			}
-			if (pKeyboardState[SDL_SCANCODE_S])
+			if(pKeyboardState[SDL_SCANCODE_S])
 			{
 				origin -= forward * movementSpeed * deltaTime;
 				hasMoved = true;
 			}
-			if (pKeyboardState[SDL_SCANCODE_D])
+			if(pKeyboardState[SDL_SCANCODE_D])
 			{
 				origin += right * movementSpeed * deltaTime;
 				hasMoved = true;
 			}
-			if (pKeyboardState[SDL_SCANCODE_A])
+			if(pKeyboardState[SDL_SCANCODE_A])
 			{
 				origin -= right * movementSpeed * deltaTime;
 				hasMoved = true;
 			}
-			if (pKeyboardState[SDL_SCANCODE_SPACE])
+			if(pKeyboardState[SDL_SCANCODE_SPACE])
 			{
 				origin += up * movementSpeed * deltaTime;
 				hasMoved = true;
 			}
-			if (pKeyboardState[SDL_SCANCODE_LSHIFT])
+			if(pKeyboardState[SDL_SCANCODE_LSHIFT])
 			{
 				origin -= up * movementSpeed * deltaTime;
 				hasMoved = true;
 			}
-			if (pKeyboardState[SDL_SCANCODE_UP])
+			if(pKeyboardState[SDL_SCANCODE_UP])
 			{
 				totalPitch += keyboardRotationSpeed * deltaTime;
 				hasMoved = true;
 			}
-			if (pKeyboardState[SDL_SCANCODE_DOWN])
+			if(pKeyboardState[SDL_SCANCODE_DOWN])
 			{
 				totalPitch -= keyboardRotationSpeed * deltaTime;
 				hasMoved = true;
 			}
-			if (pKeyboardState[SDL_SCANCODE_LEFT])
+			if(pKeyboardState[SDL_SCANCODE_LEFT])
 			{
 				totalYaw -= keyboardRotationSpeed * deltaTime;
 				hasMoved = true;
 			}
-			if (pKeyboardState[SDL_SCANCODE_RIGHT])
+			if(pKeyboardState[SDL_SCANCODE_RIGHT])
 			{
 				totalYaw += keyboardRotationSpeed * deltaTime;
 				hasMoved = true;
 			}
 
 			// Mouse movements / rotation of the camera
-			if ((mouseState & SDL_BUTTON(SDL_BUTTON_LEFT)) && mouseState & SDL_BUTTON(SDL_BUTTON_RIGHT))
+			if((mouseState & SDL_BUTTON(SDL_BUTTON_LEFT)) && mouseState & SDL_BUTTON(SDL_BUTTON_RIGHT))
 			{
 				// mouseX yaw left & right, mouse Y moves forwards & backwards
 				const float upwards = -mouseY * movementSpeed * deltaTime;
 				origin += up * upwards;
 				hasMoved = true;
 			}
-			else if (mouseState & SDL_BUTTON(SDL_BUTTON_LEFT))
+			else if(mouseState & SDL_BUTTON(SDL_BUTTON_LEFT))
 			{
 				// mouseX yaw left & right, mouse Y moves forwards & backwards
 				const float forwards = -mouseY * deltaTime;
@@ -163,7 +162,7 @@ namespace dae
 				totalYaw += yaw;
 				hasMoved = true;
 			}
-			else if (mouseState & SDL_BUTTON(SDL_BUTTON_RIGHT))
+			else if(mouseState & SDL_BUTTON(SDL_BUTTON_RIGHT))
 			{
 				// Look around the current origin
 				const float pitch = -mouseY * rotationSpeed * deltaTime;
@@ -174,12 +173,12 @@ namespace dae
 				hasMoved = true;
 			}
 
-			if (hasMoved)
+			if(hasMoved)
 			{
 				totalPitch = Clamp(totalPitch, -89.9f, 89.9f);
-				if (totalYaw > 360.0f)
+				if(totalYaw > 360.0f)
 					totalYaw -= 360.0f;
-				else if (totalYaw < 0.0f)
+				else if(totalYaw < 0.0f)
 					totalYaw += 360.0f;
 
 				const Matrix finalRotation = Matrix::CreateRotationX(totalPitch * TO_RADIANS) * Matrix::CreateRotationY(totalYaw * TO_RADIANS);

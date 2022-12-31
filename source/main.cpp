@@ -21,8 +21,8 @@ void ShutDown(SDL_Window* pWindow)
 
 int main(int argc, char* args[])
 {
-	//Unreferenced parameters
 	(void)argc;
+	//Unreferenced parameters
 	(void)args;
 
 	//Create window + surfaces
@@ -32,7 +32,7 @@ int main(int argc, char* args[])
 	const uint32_t height = 480;
 
 	SDL_Window* pWindow = SDL_CreateWindow(
-		"Rasterizer - Dejonckheere Ward",
+		"Rasterizer - Ward Dejonckheere (2DAE07)",
 		SDL_WINDOWPOS_UNDEFINED,
 		SDL_WINDOWPOS_UNDEFINED,
 		width, height, 0);

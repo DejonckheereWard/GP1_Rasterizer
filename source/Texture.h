@@ -11,9 +11,10 @@ namespace dae
 	{
 		Wrap,
 		Clamp,
-		Mirror
+		Mirror,
+		Border
 	};
-	
+
 	class Texture
 	{
 	public:

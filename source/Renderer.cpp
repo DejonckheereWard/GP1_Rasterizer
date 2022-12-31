@@ -25,6 +25,7 @@ Renderer::Renderer(SDL_Window* pWindow):
 
 	m_pDepthBufferPixels = new float[m_Width * m_Height];
 
+
 	//Initialize Camera
 	m_Camera.Initialize(45.f, { .0f,0.0f,0.f }, m_Width / (float)m_Height);
 
@@ -210,7 +211,7 @@ void Renderer::VertexTransformationFunction(std::vector<Mesh>& meshes) const
 			const Vector3 newTangent = mesh.worldMatrix.TransformVector(vert.tangent).Normalized();
 
 			// Calculate vert world position
-			const Vector3 vertPosition{ mesh.worldMatrix.TransformPoint(vert.position)};
+			const Vector3 vertPosition{ mesh.worldMatrix.TransformPoint(vert.position) };
 
 			// Store the new position in the vertices out as Vertex out, because this one has a position 4 / vector4
 			Vertex_Out& outVert = mesh.vertices_out.emplace_back(Vertex_Out{});
@@ -1098,7 +1099,7 @@ ColorRGB dae::Renderer::PixelShading(const Vertex_Out& vert)
 	const Vector3 binormal{ Vector3::Cross(vert.normal, vert.tangent) };
 	const Matrix tangentSpaceAxis{ Matrix{ vert.tangent, binormal, vert.normal, {0,0,0} } };  // {} = 0 vector
 
-	 ////Calculate normal in tangent space
+	////Calculate normal in tangent space
 	const Vector3 tangentNormal{ normalColorSample.r * 2.0f - 1.0f, normalColorSample.g * 2.0f - 1.0f, normalColorSample.b * 2.0f - 1.0f };
 	const Vector3 normalInTangentSpace{ tangentSpaceAxis.TransformVector(tangentNormal.Normalized()).Normalized() };
 
@@ -1110,7 +1111,7 @@ ColorRGB dae::Renderer::PixelShading(const Vertex_Out& vert)
 
 	if(observedArea < 0.0f)
 		return { 0,0,0 };
-	
+
 
 	// Calculate lambert
 	const ColorRGB lambertDiffuse{ (1.0f * diffuseColorSample) / PI };
