@@ -220,7 +220,7 @@ void Renderer::VertexTransformationFunction(std::vector<Mesh>& meshes) const
 			outVert.uv = vert.uv;
 			outVert.normal = newNormal;
 			outVert.tangent = newTangent;
-			outVert.viewDirection = { m_Camera.origin - vertPosition };
+			outVert.viewDirection = { vertPosition - m_Camera.origin };
 		}
 	}
 
@@ -1097,8 +1097,10 @@ ColorRGB dae::Renderer::PixelShading(const Vertex_Out& vert)
 
 	//// Calculate tangent space axis
 	const Vector3 binormal{ Vector3::Cross(vert.normal, vert.tangent) };
-	const Matrix tangentSpaceAxis{ Matrix{ vert.tangent, binormal, vert.normal, {0,0,0} } };  // {} = 0 vector
+	const Matrix tangentSpaceAxis{ Matrix{ vert.tangent, binormal, vert.normal, Vector3::Zero } };  // {} = 0 vector
 
+
+	ColorRGB x = 2.0f * normalColorSample - colors::White;
 	////Calculate normal in tangent space
 	const Vector3 tangentNormal{ normalColorSample.r * 2.0f - 1.0f, normalColorSample.g * 2.0f - 1.0f, normalColorSample.b * 2.0f - 1.0f };
 	const Vector3 normalInTangentSpace{ tangentSpaceAxis.TransformVector(tangentNormal.Normalized()).Normalized() };
@@ -1118,7 +1120,7 @@ ColorRGB dae::Renderer::PixelShading(const Vertex_Out& vert)
 
 	// Calculate phong
 	const Vector3 reflect{ lightDirection - (2.0f * Vector3::Dot(currentNormal, lightDirection) * currentNormal) };
-	const float RdotV{ std::max(0.0f, Vector3::Dot(reflect, vert.viewDirection)) };
+	const float RdotV{ std::max(0.0f, Vector3::Dot(reflect, -vert.viewDirection)) };
 	const ColorRGB phongSpecular{ specularColorSample * powf(RdotV, glossinessColor.r * specularGlossiness) }; // Glosinness map is greyscale, ro r g and b are the same
 
 	switch(m_CurrentShadingMode)
