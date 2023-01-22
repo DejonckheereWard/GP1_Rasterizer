@@ -69,35 +69,7 @@ void Renderer::Render()
 	//Lock BackBuffer
 	SDL_LockSurface(m_pBackBuffer);
 
-	//Render_W06_P1();
-	//Render_W06_P2();
-	//Render_W06_P3();
-	//Render_W06_P4();
-	//Render_W06_P5();
-
-	Render_W08_P1();
-
-
-	//RENDER LOGIC
-	//for (int px{}; px < m_Width; ++px)
-	//{
-	//	for (int py{}; py < m_Height; ++py)
-	//	{
-	//		float gradient = px / static_cast<float>(m_Width);
-	//		gradient += py / static_cast<float>(m_Width);
-	//		gradient /= 2.0f;
-
-	//		ColorRGB finalColor{ gradient, gradient, gradient };
-
-	//		//Update Color in Buffer
-	//		finalColor.MaxToOne();
-
-	//		m_pBackBufferPixels[px + (py * m_Width)] = SDL_MapRGB(m_pBackBuffer->format,
-	//			static_cast<uint8_t>(finalColor.r * 255),
-	//			static_cast<uint8_t>(finalColor.g * 255),
-	//			static_cast<uint8_t>(finalColor.b * 255));
-	//	}
-	//}
+	Rasterize();
 
 	//@END
 	//Update SDL Surface
@@ -145,46 +117,6 @@ void Renderer::VertexTransformationFunction(const std::vector<Vertex>& vertices_
 
 void Renderer::VertexTransformationFunction(std::vector<Mesh>& meshes) const
 {
-	// Convert the vertices_in from world space to screen space (NDC intermedian step)
-	// World -> NDC -> Screen
-
-#pragma region Week07
-	//for (Mesh& mesh : meshes)
-	//{
-	//	for (const Vertex& vert : mesh.vertices)
-	//	{
-	//		// World to camera (view space)
-	//		Vector3 viewSpaceVertex = m_Camera.viewMatrix.TransformPoint(vert.position);  // Transform the position
-
-	//		// Consider the camera (fov & aspect ration) first
-	//		Vector3 adjustedViewSpaceVertex;
-	//		const float aspectRatio = m_Width / (float)m_Height;
-	//		adjustedViewSpaceVertex.x = viewSpaceVertex.x / (aspectRatio * m_Camera.fov);
-	//		adjustedViewSpaceVertex.y = viewSpaceVertex.y / m_Camera.fov;
-
-	//		// Convert to NDC (perspective divide) / projection space
-	//		Vector3 ndcSpaceVertex;
-	//		ndcSpaceVertex.x = adjustedViewSpaceVertex.x / viewSpaceVertex.z;
-	//		ndcSpaceVertex.y = adjustedViewSpaceVertex.y / viewSpaceVertex.z;
-	//		ndcSpaceVertex.z = viewSpaceVertex.z;
-
-	//		// Transform to screen space
-	//		Vertex_Out& screenSpaceVert = mesh.vertices_out.emplace_back(Vertex_Out{});
-	//		screenSpaceVert.position = {
-	//			(ndcSpaceVertex.x + 1) / 2.0f * m_Width , // Screen X
-	//			(1 - ndcSpaceVertex.y) / 2.0f * m_Height, // Screen Y,
-	//			ndcSpaceVertex.z,
-	//			1.0f / viewSpaceVertex.z
-	//		};
-	//		screenSpaceVert.color = vert.color;
-	//		screenSpaceVert.uv = vert.uv;
-
-	//	}
-	//}
-#pragma endregion
-#pragma region Week08
-
-
 	for(Mesh& mesh : meshes)
 	{
 		// Calculate WorldViewProjectionmatrix for every mesh	
@@ -223,14 +155,12 @@ void Renderer::VertexTransformationFunction(std::vector<Mesh>& meshes) const
 			outVert.viewDirection = { vertPosition - m_Camera.origin };
 		}
 	}
-
-#pragma endregion
 }
 
 
 
 
-#ifdef Week06
+#ifdef Old
 void dae::Renderer::Render_W06_P1()
 {
 	// Triangle in NDC Space (Normalized Device Coords)
@@ -638,7 +568,6 @@ void dae::Renderer::Render_W06_P5()
 		}
 	}
 }
-#endif
 
 void dae::Renderer::Render_W07_P1()
 {
@@ -832,8 +761,9 @@ void dae::Renderer::Render_W07_P1()
 		}
 	}
 }
+#endif
 
-void dae::Renderer::Render_W08_P1()
+void dae::Renderer::Rasterize()
 {
 	ClearBackBuffer();
 	std::fill_n(m_pDepthBufferPixels, m_Width * m_Height, FLT_MAX);
@@ -1049,10 +979,10 @@ void dae::Renderer::Render_W08_P1()
 								break;
 							case dae::Renderer::RenderMode::DepthBuffer:
 							{
-								const float remapMin{ 0.985f };
+								const float remapMin{ 0.995f };
 								const float remapMax{ 1.0f };
 
-								float depthColor = (Clamp(zBuffer, remapMin, remapMax) - remapMin) * (1.0f / (remapMax - remapMin));
+								float depthColor = (Clamp(zBuffer, remapMin, remapMax) - remapMin) / (remapMax - remapMin);
 								//depthColor = 1.0f - depthColor;  // Invert white and black
 
 
@@ -1076,6 +1006,7 @@ void dae::Renderer::Render_W08_P1()
 			}
 		}
 	}
+
 }
 
 

@@ -83,17 +83,17 @@ namespace dae
 		void ClearBackBuffer();
 		ColorRGB PixelShading(const Vertex_Out& vert);
 
-#ifdef Week06
+#ifdef Old
 		void Render_W06_P1();  // Rasterizer stage only
 		void Render_W06_P2();  // Projection stage only
 		void Render_W06_P3();  // Barycentric coords
 		void Render_W06_P4();  // Depth buffer
 		void Render_W06_P5();  // Bounding box optimization
+		void Render_W07_P1();
 #endif
 
-		void Render_W07_P1();
 
-		void Render_W08_P1();
+		void Rasterize();
 
 
 	};
